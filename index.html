@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Game: Sắp Xếp Câu Tiếng Anh (A2 - B1)</title>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --success-color: #2ec4b6;
+            --danger-color: #e71d36;
+            --bg-color: #f4f7f6;
+            --text-color: #2b2d42;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .progress {
+            background: var(--primary-color);
+            height: 100%;
+            width: 20%;
+            transition: width 0.3s ease;
+        }
+
+        .hint {
+            font-style: italic;
+            color: #6c757d;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .word-pool, .answer-zone {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            min-height: 60px;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .word-pool {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+        }
+
+        .answer-zone {
+            background: #edf2f7;
+            border: 2px solid #cbd5e0;
+        }
+
+        .word-card {
+            background: white;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .word-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-color: var(--primary-color);
+        }
+
+        .word-card.selected {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .result-message {
+            margin-top: 15px;
+            font-weight: bold;
+            font-size: 18px;
+            min-height: 27px;
+        }
+
+        .success { color: var(--success-color); }
+        .error { color: var(--danger-color); }
+
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .score-text {
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <div id="game-screen" class="screen active">
+            <h1 id="question-title">Câu hỏi 1/5</h1>
+            <div class="progress-bar"><div class="progress" id="progress"></div></div>
+            
+            <p class="hint" id="hint-text">Nghĩa của câu sẽ hiển thị ở đây...</p>
+            
+            <div class="answer-zone" id="answer-zone" onclick="returnWord(event)"></div>
+            
+            <div class="word-pool" id="word-pool"></div>
+
+            <div>
+                <button class="btn btn-secondary" onclick="resetCurrentSentence()">Làm lại</button>
+                <button class="btn" id="submit-btn" onclick="checkAnswer()">Kiểm tra</button>
+            </div>
+            <div class="result-message" id="result-message"></div>
+        </div>
+
+        <div id="result-screen" class="screen">
+            <h1>Chúc mừng bạn đã hoàn thành!</h1>
+            <p class="score-text" id="final-score">Bạn đạt được: 0/5 câu đúng.</p>
+            <button class="btn" onclick="restartGame()">Chơi lại</button>
+        </div>
+    </div>
+
+    <script>
+        // Danh sách 5 câu hỏi từ level A2 đến B1 kèm bản dịch nghĩa
+        const quizData = [
+            {
+                correct: "If it rains tomorrow, we will cancel the picnic.",
+                hint: "Nếu ngày mai trời mưa, chúng tôi sẽ hủy chuyến dã ngoại. (Câu ĐK loại 1 - A2/B1)"
+            },
+            {
+                correct: "She has been learning English since she was a child.",
+                hint: "Cô ấy đã học tiếng Anh từ khi còn là một đứa trẻ. (Thì Hiện tại hoàn thành tiếp diễn - B1)"
+            },
+            {
+                correct: "Although he was tired, he finished his homework.",
+                hint: "Mặc dù anh ấy mệt, anh ấy vẫn hoàn thành bài tập về nhà. (Cấu trúc Although - A2)"
+            },
+            {
+                correct: "The book which you gave me is very interesting.",
+                hint: "Cuốn sách mà bạn tặng tôi rất là thú vị. (Mệnh đề quan hệ - B1)"
+            },
+            {
+                correct: "I am looking forward to hearing from you soon.",
+                hint: "Tôi rất mong sớm nhận được phản hồi từ bạn. (Cấu trúc Look forward to - B1)"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedWords = [];
+
+        // Khởi tạo câu hỏi
+        function loadQuestion() {
+            const currentQuestion = quizData[currentQuestionIndex];
+            
+            // Cập nhật giao diện tiêu đề, tiến trình và gợi ý
+            document.getElementById("question-title").innerText = `Câu hỏi ${currentQuestionIndex + 1}/${quizData.length}`;
+            document.getElementById("progress").style.width = `${((currentQuestionIndex + 1) / quizData.length) * 100}%`;
+            document.getElementById("hint-text").innerText = currentQuestion.hint;
+            document.getElementById("result-message").innerText = "";
+            document.getElementById("submit-btn").disabled = false;
+
+            // Xóa dữ liệu cũ
+            const wordPool = document.getElementById("word-pool");
+            const answerZone = document.getElementById("answer-zone");
+            wordPool.innerHTML = "";
+            answerZone.innerHTML = "";
+            selectedWords = [];
+
+            // Tách từ và xáo trộn từ (Shuffling)
+            let words = currentQuestion.correct.split(" ");
+            let shuffledWords = [...words].sort(() => Math.random() - 0.5);
+
+            // Tạo các thẻ từ (Word Cards) trong kho từ
+            shuffledWords.forEach((word, index) => {
+                const wordDiv = document.createElement("div");
+                wordDiv.classList.add("word-card");
+                wordDiv.innerText = word;
+                wordDiv.dataset.index = index;
+                wordDiv.onclick = () => selectWord(wordDiv, word);
+                wordPool.appendChild(wordDiv);
+            });
+        }
+
+        // Khi người chơi click chọn một từ từ kho
+        function selectWord(wordDiv, word) {
+            wordDiv.classList.add("selected");
+            
+            // Tạo một thẻ từ mới trong vùng trả lời
+            const answerZone = document.getElementById("answer-zone");
+            const answerDiv = document.createElement("div");
+            answerDiv.classList.add("word-card");
+            answerDiv.innerText = word;
+            // Lưu lại reference tới thẻ từ gốc để bật lại nếu hoàn tác
+            answerDiv.dataset.originIndex = wordDiv.dataset.index; 
+            
+            answerZone.appendChild(answerDiv);
+            selectedWords.push(word);
+        }
+
+        // Hoàn tác: Click vào từ ở vùng trả lời để trả lại kho từ
+        function returnWord(event) {
+            if (event.target.classList.contains("word-card")) {
+                const answerDiv = event.target;
+                const originIndex = answerDiv.dataset.originIndex;
+                
+                // Tìm lại từ gốc trong pool để kích hoạt lại
+                const originalDiv = document.querySelector(`.word-pool .word-card[data-index='${originIndex}']`);
+                if (originalDiv) originalDiv.classList.remove("selected");
+
+                // Xóa khỏi mảng dữ liệu đang chọn
+                const wordText = answerDiv.innerText;
+                const indexInArr = selectedWords.indexOf(wordText);
+                if (indexInArr > -1) selectedWords.splice(indexInArr, 1);
+
+                answerDiv.remove();
+            }
+        }
+
+        // Reset câu hiện tại
+        function resetCurrentSentence() {
+            loadQuestion();
+        }
+
+        // Kiểm tra đáp án
+        function checkAnswer() {
+            const currentQuestion = quizData[currentQuestionIndex];
+            const playerAnswer = selectedWords.join(" ");
+            const resultMessage = document.getElementById("result-message");
+
+            if (playerAnswer === currentQuestion.correct) {
+                resultMessage.innerHTML = "<span class='success'>Chính xác! 🎉</span>";
+                score++;
+                document.getElementById("submit-btn").disabled = true;
+                
+                // Chuyển câu sau 1.5 giây
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1500);
+            } else {
+                resultMessage.innerHTML = "<span class='error'>Chưa chính xác, hãy thử lại hoặc kiểm tra kỹ vị trí các từ nhé! ❌</span>";
+            }
+        }
+
+        // Qua câu tiếp theo hoặc kết thúc game
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                // Hiển thị màn hình kết quả
+                document.getElementById("game-screen").classList.remove("active");
+                document.getElementById("result-screen").classList.add("active");
+                document.getElementById("final-score").innerText = `Bạn đạt được: ${score}/${quizData.length} câu đúng.`;
+            }
+        }
+
+        // Chơi lại game từ đầu
+        function restartGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            document.getElementById("result-screen").classList.remove("active");
+            document.getElementById("game-screen").classList.add("active");
+            loadQuestion();
+        }
+
+        // Khởi chạy game lần đầu tiên khi tải trang
+        window.onload = loadQuestion;
+    </script>
+</body>
+</html>
